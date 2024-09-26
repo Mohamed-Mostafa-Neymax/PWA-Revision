@@ -1,11 +1,14 @@
-var CACHE_STATIC_NAME = 'STATIC';
-var CACHE_DYNAMIC_NAME = 'DYNAMIC';
+importScripts('/src/js/idb.js');
+importScripts('/src/js/utility.js');
+var CACHE_STATIC_NAME = 'STATIC-v10';
+var CACHE_DYNAMIC_NAME = 'DYNAMIC-v10';
 var STATIC_FILES = [
     '/',
     '/index.html',
     '/offline.html',
     '/src/js/app.js',
     '/src/js/feed.js',
+    '/src/js/idb.js',
     '/src/js/promise.js',
     '/src/js/fetch.js',
     '/src/js/material.min.js',
@@ -56,7 +59,6 @@ self.addEventListener('activate', function (event) {
 function isInArray(string, array) {
     var cachePath;
     if (string.indexOf(self.origin) === 0) { // request targets domain where we serve the page from (i.e. NOT a CDN)
-        console.log('matched ', string);
         cachePath = string.substring(self.origin.length); // take the part of the URL AFTER the domain (e.g. after localhost:8080)
     } else {
         cachePath = string; // store the full request (for CDNs)
@@ -64,19 +66,21 @@ function isInArray(string, array) {
     return array.indexOf(cachePath) > -1;
 }
 
-self.addEventListener('fetch', function (event) {
 
+self.addEventListener('fetch', function (event) {
     var url = 'https://advanced-redux-65e37-default-rtdb.firebaseio.com/posts.json';
     if (event.request.url.indexOf(url) > -1) {
         event.respondWith(
-            caches.open(CACHE_DYNAMIC_NAME)
-                .then(function (cache) {
-                    return fetch(event.request)
-                        .then(function (res) {
-                            // trimCache(CACHE_DYNAMIC_NAME, 3);
-                            cache.put(event.request, res.clone());
-                            return res;
+            fetch(event.request)
+                .then(function (res) {
+                    const clonedRes = res.clone();
+                    clearData('posts')
+                        .then(clearRes => clonedRes.json())
+                        .then(data => {
+                            for (let key in data)
+                                writeData('posts', data[key]);
                         });
+                    return res;
                 })
         );
     } else if (isInArray(event.request.url, STATIC_FILES)) {
@@ -99,7 +103,7 @@ self.addEventListener('fetch', function (event) {
                                         return res;
                                     })
                             })
-                            .catch(function (err) {
+                            .catch(function (_err) {
                                 return caches.open(CACHE_STATIC_NAME)
                                     .then(function (cache) {
                                         if (event.request.headers.get('accept').includes('text/html')) {
@@ -111,4 +115,8 @@ self.addEventListener('fetch', function (event) {
                 })
         );
     }
+});
+
+self.addEventListener('sync', event => {
+    console.log('SW Sync Event : ', event);
 });
