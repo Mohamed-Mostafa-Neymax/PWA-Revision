@@ -118,9 +118,15 @@ function sendData() {
   })
   .then(res => {
     console.log('Sent data response: ', res);
-    updateUI(data);
+    // updateUI();
   });
 }
+
+/*
+    Get the form data
+    Store it in IndexedDB
+    Open a background Sync task
+*/
 
 form.addEventListener('submit', event => {
   event.preventDefault();
@@ -129,7 +135,8 @@ form.addEventListener('submit', event => {
     return;
   }
   closeCreatePostModal();
-  if ('serviceWorker' in navigator && 'syncManager' in window) {
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    console.log('Condition is true');
     navigator.serviceWorker.ready
       .then(sw => {
         const post = {
@@ -147,6 +154,7 @@ form.addEventListener('submit', event => {
           .catch(err => { console.log(err) });
       })
   } else {
+    console.log('Condition is false');
     sendData();
   }
 });

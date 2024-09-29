@@ -1,7 +1,7 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
-var CACHE_STATIC_NAME = 'STATIC-v10';
-var CACHE_DYNAMIC_NAME = 'DYNAMIC-v10';
+var CACHE_STATIC_NAME = 'STATIC';
+var CACHE_DYNAMIC_NAME = 'DYNAMIC';
 var STATIC_FILES = [
     '/',
     '/index.html',
@@ -117,6 +117,37 @@ self.addEventListener('fetch', function (event) {
     }
 });
 
+// This event will be excuted whenever whenever the SW reestablished the connectivity.
+// OR
+// This event will be excuted if the connectivity was always there as soon as a new task was registered.
 self.addEventListener('sync', event => {
     console.log('SW Sync Event : ', event);
+    if (event.tag === 'sync-new-post') {
+        console.log('SW Sync New Post.');
+        event.waitUntil(
+            readData('sync-posts')
+                .then(data => {
+                    for (let dt of data) {
+                        fetch('https://advanced-redux-65e37-default-rtdb.firebaseio.com/posts.json', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                id: dt.id,
+                                title: dt.title,
+                                location: dt.location,
+                                image: 'https://firebasestorage.googleapis.com/v0/b/advanced-redux-65e37.appspot.com/o/sf-boat.jpg?alt=media&token=84c8033d-86d8-4c1c-bbc9-e442469506d4'
+                            }),
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'accept': 'application/json'
+                            }
+                        }).then(res => {
+                            if (res.ok) 
+                                deleteItem('sync-posts', dt.id);
+                        }).catch(err => {
+                            console.log('Error while sending data', err);
+                        });
+                    }
+                })
+        )
+    }
 });
